@@ -62,3 +62,10 @@ OnRtnDepthMarketData 里取 TSC 作为起点，投递命令后由 TD 线程在 R
 
 - 截至 2026-11-21，SIMNOW 前置拒绝连接，登录/结算/对账尚未在 Linux 实测
 
+
+## 运行前
+
+    export CTP_USER=<账号>
+    export CTP_PASS=<密码>
+
+前置/经纪商可用 CTP_TD_FRONT、CTP_MD_FRONT、CTP_BROKER 覆盖，见 include/types.h 的 load_cfg()。
