@@ -51,3 +51,7 @@
 7. flow 目录被 root 跑过会导致普通用户打不开 → `chown -R xjg:xjg flow_td flow_md`
 o
 
+## 2026-11-21 收尾
+- 凭据改环境变量（load_cfg），filter-branch 重写历史，grep 计数 0
+- run_local.sh 本地启动脚本（含凭据，已进 .gitignore）
+- 待：可用前置 → READY → 真实 LAT → 简历那条描述
