@@ -3,3 +3,4 @@ cpptd
 flow_td/
 flow_md/
 *.o
+run_local.sh
