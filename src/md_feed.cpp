@@ -252,6 +252,28 @@ void MdFeed::on_cmd(const std::string& line) {
         }
         else log("用法: unsub <合约>");
     }
+    else if (cmd == "fake") {
+        std::string inst = "au2612";
+        double bid = 0, ask = 0;
+        is >> inst >> bid >> ask;
+        {
+            std::lock_guard<std::mutex> lk(subs_mtx_);
+            auto& s = subs_[inst];
+            s.inst = inst;
+            if (s.sub_at_ms == 0) s.sub_at_ms = now_ms();
+        }
+        TickMsg t;
+        t.inst       = inst;
+        t.arrival_ms = now_ms();
+        t.tsc        = rdtsc_now();
+        t.bid1       = bid;
+        t.ask1       = ask;
+        t.last_px    = (bid + ask) / 2.0;
+        log("FAKE %s bid=%.2f ask=%.2f（合成 tick，验证 tick_cb 链路）",
+            inst.c_str(), bid, ask);
+        on_tick(t);
+    }
+
     else if (cmd == "q") dump();
     else if (cmd == "s") {
         std::lock_guard<std::mutex> lk(subs_mtx_);
