@@ -1,6 +1,7 @@
 // types.h —— 纯业务类型，不含任何 CThostFtdc*
 #pragma once
 #include <string>
+#include <cstdlib>
 
 namespace ctp {
 
@@ -43,21 +44,40 @@ inline bool is_active(char st) {
              st == OST_NoTradeNotQueueing || st == OST_Canceled);
 }
 
-// ---- 配置 ----
+// ---- 配置（凭据不落仓库，从环境变量读）----
 struct Cfg {
     std::string front      = "tcp://182.254.243.31:30002";
     std::string md_front   = "tcp://182.254.243.31:30012";
     std::string broker     = "9999";
-    std::string user       = "[REDACTED]";
-    std::string pass       = "[REDACTED]";
+    std::string user       = "";              // CTP_USER
+    std::string pass       = "";              // CTP_PASS
     std::string appid      = "simnow_client_test";
     std::string authcode   = "0000000000000000";
-    std::string flow_td    = "./flow_td/";   // 原 D:\Code\... 改成相对路径
+    std::string flow_td    = "./flow_td/";
     std::string flow_md    = "./flow_md/";
     std::string drill_ip   = "182.254.243.31";
     std::string drill_port = "30002";
     std::string drill_inst = "au2612";
 };
+
+// 环境变量覆盖：CTP_TD_FRONT / CTP_MD_FRONT / CTP_BROKER / CTP_USER / CTP_PASS
+//               CTP_APPID / CTP_AUTHCODE / CTP_DRILL_INST
+inline Cfg load_cfg() {
+    Cfg c;
+    auto env = [](const char* k, const std::string& def) {
+        const char* v = std::getenv(k);
+        return (v && *v) ? std::string(v) : def;
+    };
+    c.front      = env("CTP_TD_FRONT",   c.front);
+    c.md_front   = env("CTP_MD_FRONT",   c.md_front);
+    c.broker     = env("CTP_BROKER",     c.broker);
+    c.user       = env("CTP_USER",       c.user);
+    c.pass       = env("CTP_PASS",       c.pass);
+    c.appid      = env("CTP_APPID",      c.appid);
+    c.authcode   = env("CTP_AUTHCODE",   c.authcode);
+    c.drill_inst = env("CTP_DRILL_INST", c.drill_inst);
+    return c;
+}
 
 // ---- 本地单 / 回报 ----
 struct LocalOrder {

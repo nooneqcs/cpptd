@@ -13,7 +13,11 @@ int main() {
     ctp::TdGateway td;
     ctp::MdFeed    md;
 
-    ctp::Cfg cfg;                 // 两边共用一份配置
+    ctp::Cfg cfg = ctp::load_cfg();   // 凭据从环境变量读
+    if (cfg.user.empty() || cfg.pass.empty())
+        ctp::log("提示：未设置 CTP_USER / CTP_PASS，登录会失败");
+
+                 // 两边共用一份配置
     td.cfg = cfg;
     md.cfg = cfg;
 
