@@ -38,3 +38,6 @@ add_executable(risk_test
 )
 target_include_directories(risk_test PRIVATE include)
 
+add_executable(log_test tests/log_test.cpp src/log.cpp)
+target_include_directories(log_test PRIVATE include)
+
