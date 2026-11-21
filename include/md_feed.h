@@ -4,6 +4,7 @@
 #include <deque>
 #include <unordered_map>
 #include <mutex>
+#include <functional>
 #include "types.h"
 #include "event_queue.h"
 
@@ -34,6 +35,9 @@ public:
     std::vector<std::string> subs = { "au2612" };
     int stale_ms = 10000;   // 超过这么久没行情 → 标 stale 并重订阅（最多 2 次）
     int hole_ms  = 1500;    // 相邻行情间隔超过它计一次空洞（正常快照 500ms）
+
+    // 行情到达回调（MD 事件循环线程里调用）；实现里只允许做投递/打点，不许碰 TD 状态
+    std::function<void(const TickMsg&)> tick_cb;
 
     void run();
     void post_cmd(const std::string& line);

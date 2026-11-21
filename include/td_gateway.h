@@ -74,6 +74,12 @@ private:
     int  net_unblock();
     void post_drill(const std::string& s);
 
+    // ---- tick→报单 本地耗时打点 ----
+    long long lat_n_ = 0, lat_sum_ = 0, lat_min_ = 0, lat_max_ = 0;
+
+
+
+
     // ---- 状态 ----
     St   st_ = St::INIT;
     bool halted_ = false;

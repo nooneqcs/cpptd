@@ -100,9 +100,20 @@ struct Event {
 };
 
 // ---- MD 侧类型与事件 ----
+
+// 读时间戳计数器（同一台机器跨线程可比，TSC 不随核变化）
+inline unsigned long long rdtsc_now() {
+#ifdef _MSC_VER
+    return __rdtsc();
+#else
+    return __builtin_ia32_rdtsc();
+#endif
+}
+
 struct TickMsg {
     std::string inst;
     long long arrival_ms = 0;
+    unsigned long long tsc = 0;   // 到达时刻的 TSC，用于 tick→报单打点
     double last_px = 0, bid1 = 0, ask1 = 0;
     int volume = 0, oi = 0;
     char update_time[16] = { 0 };

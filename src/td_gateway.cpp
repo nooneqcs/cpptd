@@ -5,6 +5,7 @@
 #include <cstring>
 #include <sstream>
 #include <thread>
+#include <chrono>
 
 #include "ThostFtdcTraderApi.h"     // 唯一允许 include CTP 头的文件之一
 #include "log.h"
@@ -25,6 +26,20 @@ static_assert(OST_NoTradeQueueing       == THOST_FTDC_OST_NoTradeQueueing,      
 static_assert(OST_NoTradeNotQueueing    == THOST_FTDC_OST_NoTradeNotQueueing,    "OST_NoTradeNotQueueing 不一致");
 static_assert(OST_Canceled              == THOST_FTDC_OST_Canceled,              "OST_Canceled 不一致");
 static_assert(OST_Unknown               == THOST_FTDC_OST_Unknown,               "OST_Unknown 不一致");
+// TSC → 纳秒：启动时用 steady_clock 标定一次（不依赖主频标称值）
+static double tsc_to_ns(unsigned long long d) {
+    static const double hz = []() {
+        auto t0 = std::chrono::steady_clock::now();
+        unsigned long long c0 = rdtsc_now();
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        auto t1 = std::chrono::steady_clock::now();
+        unsigned long long c1 = rdtsc_now();
+        double s = std::chrono::duration<double>(t1 - t0).count();
+        return s > 0 ? (double)(c1 - c0) / s : 1.0;
+    }();
+    return (double)d * 1e9 / hz;
+}
+
 
 // ===== CTP 结构 → 业务结构 =====
 static OrderRtn from_order(const CThostFtdcOrderField* o) {
@@ -520,6 +535,27 @@ void TdGateway::on_cmd(const std::string& line) {
         if (is >> px >> vol) run_drill(px, vol);
         else log("用法: drill <价格> <手数>  —— 报单后 300ms 断网 20s");
     }
+    else if (cmd == "__tick_order") {
+        std::string inst; double px = 0; unsigned long long t0 = 0;
+        if (is >> inst >> px >> t0) {
+            bool ok = submit_order(inst, DIR_Buy, OF_Open, px, 1);
+            unsigned long long t1 = rdtsc_now();
+            if (ok) {
+                long long ns = (long long)tsc_to_ns(t1 - t0);
+                lat_n_++; lat_sum_ += ns;
+                if (lat_n_ == 1 || ns < lat_min_) lat_min_ = ns;
+                if (ns > lat_max_) lat_max_ = ns;
+                log("LAT tick->order %lld ns inst=%s px=%.2f (n=%lld)",
+                    ns, inst.c_str(), px, lat_n_);
+            }
+        }
+        else log("用法: __tick_order <合约> <价> <tsc>");
+    }
+    else if (cmd == "lat") {
+        log("LAT n=%lld avg=%.0f min=%lld max=%lld ns", lat_n_,
+            lat_n_ ? (double)lat_sum_ / lat_n_ : 0.0, lat_min_, lat_max_);
+    }
+
     else {
         log("命令: b / c / ca / q / s / r / p / k / rtest");
         log("      cut / drill <价> <手> / lost <价> <手> / fill <价> <手>");

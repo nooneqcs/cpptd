@@ -61,6 +61,7 @@ public:
         TickMsg& t = e.tick;
         t.inst       = d->InstrumentID;
         t.arrival_ms = now_ms();
+        t.tsc        = rdtsc_now();          // 到达时刻，打点起点
         t.last_px    = d->LastPrice > 1e10 ? 0 : d->LastPrice;
         t.bid1       = d->BidPrice1  > 1e10 ? 0 : d->BidPrice1;
         t.ask1       = d->AskPrice1  > 1e10 ? 0 : d->AskPrice1;
@@ -164,6 +165,7 @@ void MdFeed::handle(const MdEvent& e) {
         break;
     }
 }
+
 // 定期检查：长时间无行情 → 标 stale，最多重订阅 2 次
 void MdFeed::tick() {
     long long now = now_ms();
@@ -219,7 +221,11 @@ void MdFeed::on_tick(const TickMsg& t) {
     s.oi      = t.oi;
     std::snprintf(s.update_time, sizeof(s.update_time), "%s", t.update_time);
     s.update_ms = t.update_ms;
+
+    // 注意：此处持有 subs_mtx_，回调内禁止再调 MdFeed 的加锁接口
+    if (tick_cb) tick_cb(t);
 }
+
 // ---------- 命令 ----------
 void MdFeed::on_cmd(const std::string& line) {
     std::istringstream is(line);
@@ -254,6 +260,7 @@ void MdFeed::on_cmd(const std::string& line) {
     else if (cmd == "r") { log("重订阅全部"); do_sub(subs); }
     else log("命令: sub / unsub / q / s / r");
 }
+
 // ---------- 订阅管理（只在主线程调） ----------
 void MdFeed::do_sub(const std::vector<std::string>& list) {
     if (st_ != St::READY) { log("订阅被忽略：状态 %s", st_name(st_)); return; }
