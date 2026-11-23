@@ -1,4 +1,7 @@
+
 #pragma once
+#include <functional>
+
 #include <string>
 #include <vector>
 #include <deque>
@@ -34,6 +37,9 @@ public:
 
     St   state() const { return st_; }
     bool ready()  const { return st_ == St::READY; }
+    std::function<void(const std::string&, double, int)> order_cb;  // 报单已发出
+    std::function<void(const OrderRtn&)>  rtn_cb;                   // 订单回报
+    std::function<void(const TradeRtn&)>  trade_cb;                 // 成交回报
 
     // ---- 给 SPI 适配器用（回调线程）----
     void post_event(const Event& e);

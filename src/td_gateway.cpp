@@ -265,6 +265,7 @@ bool TdGateway::submit_order(const std::string& instrument, char direction, char
     log("INSERT %s ref=%s %c/%c px=%.2f vol=%d -> ret=%d",
         instrument.c_str(), f.OrderRef, direction, offset, price, volume, r);
     if (r != 0) { book_[lo.order_ref].status = OST_Canceled; return false; }
+    if (order_cb) order_cb(instrument, price, volume);
     return true;
 }
 
@@ -325,7 +326,7 @@ void TdGateway::handle(const Event& e) {
         if (!e.ok) log("query account err %d %s", e.err, e.msg.c_str());
         if (e.last) {
             acc_done_ = true; qry_inflight_ = false;
-            log("account avail=%s", e.tag.c_str());
+            avail_ = std::stod(e.tag); log("account avail=%.2f", avail_);
             risk.frozen = 0;          // 用柜台真实可用重建，清掉本地预扣
         }
         break;
@@ -366,6 +367,7 @@ void TdGateway::handle(const Event& e) {
 }
 
 void TdGateway::on_order_rtn(const OrderRtn& o) {
+    if (rtn_cb) rtn_cb(o);
     auto& lo = book_[o.order_ref];
     lo.order_ref   = o.order_ref;
     lo.instrument  = o.instrument;
@@ -386,6 +388,7 @@ void TdGateway::on_order_rtn(const OrderRtn& o) {
 }
 
 void TdGateway::on_trade_rtn(const TradeRtn& t) {
+    if (trade_cb) trade_cb(t);
     auto& lo = book_[t.order_ref];
     lo.order_ref  = t.order_ref;
     lo.instrument = t.instrument;

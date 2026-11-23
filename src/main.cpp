@@ -7,6 +7,7 @@
 
 #include "td_gateway.h"
 #include "md_feed.h"
+#include "lat_log.h"
 #include "log.h"
 
 int main() {
@@ -23,6 +24,7 @@ int main() {
 
     // 行情驱动下单：第一笔行情到达时投递报单命令，把 tick 的 TSC 带给 TD 打点
     md.tick_cb = [&td](const ctp::TickMsg& t) {
+        ctp::lat_g().mark_tick(t);
         if (t.ask1 <= 0.0) return;
         static bool fired = false;
         ctp::log("TICK-CB %s bid=%.2f ask=%.2f ready=%d",
@@ -38,6 +40,10 @@ int main() {
     std::thread md_th([&md] { md.run(); });
     md_th.detach();
 
+    td.order_cb = [](const std::string& i, double p, int v) { ctp::lat_g().mark_order(i, p, v); };
+    td.rtn_cb   = [](const ctp::OrderRtn& o) { ctp::lat_g().mark_rtn(o); };
+    td.trade_cb = [](const ctp::TradeRtn& t) { ctp::lat_g().mark_trade(t); };
+
     std::thread in_th([&td, &md] {
         std::string line;
         while (std::getline(std::cin, line)) {
@@ -47,6 +53,7 @@ int main() {
             is >> cmd;
             if (cmd == "sub" || cmd == "unsub" || cmd == "fake") md.post_cmd(line);
             else if (cmd == "mq")                               md.post_cmd("q");
+            else if (cmd == "lat") ctp::lat_g().dump();
             else if (cmd == "ms")                               md.post_cmd("s");
             else if (cmd == "mr")                               md.post_cmd("r");
             else                                                td.post_cmd(line);

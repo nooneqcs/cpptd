@@ -1,6 +1,11 @@
 build/
-cpptd
 flow_td/
 flow_md/
+*.log
+*.pcap
+*.csv
 *.o
+*.so
+*.bak
 run_local.sh
+second*
